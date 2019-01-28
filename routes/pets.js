@@ -59,14 +59,20 @@ module.exports = (app) => {
   app.get('/search', (req, res) => {
     const term = new RegExp(req.query.term, 'i');
 
-    Pet.find({
+    const page = req.query.page || 1;
+    Pet.paginate({
       $or: [
         { name: term },
         { species: term }
       ]
-    })
-    .exec((err, pets) => {
-      res.render('pets-index', { pets });
+    }, { page })
+    .then((results) => {
+      res.render('pets-index', {
+        pets: results.docs,
+        pagesCount: results.pages,
+        currentPage: page,
+        term: req.query.term
+      });
     });
   });
 }
