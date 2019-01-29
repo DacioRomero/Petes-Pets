@@ -1,25 +1,31 @@
-if (document.querySelector('#new-pet')) {
-  console.log('Found form')
+var form = document.getElementById('new-pet');
+var alert = document.getElementById('alert');
 
-  document.querySelector('#new-pet').addEventListener('submit', (e) => {
+if (form) {
+  form.addEventListener('submit', (e) => {
     e.preventDefault();
-    console.log('submit?!')
 
-    let pet = {};
-    const inputs = document.querySelectorAll('.form-control');
-    for (const input of inputs) {
-      pet[input.name] = input.value
-    }
+    var pet = new FormData(form);
 
-    axios.post('/pets', pet)
+    axios.post('/pets', pet, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
     .then((response) => {
+      console.log(response)
       window.location.replace(`/pets/${response.data.pet._id}`);
     })
     .catch((error) => {
-      const alert = document.getElementById('alert');
+      console.log(error.response)
       alert.classList.add('alert-warning');
       alert.textContent = 'Oops, something went wrong saving your pet. Please check your information and try again.';
       alert.style.display = 'block';
+
+      setTimeout(() => {
+        alert.style.display = 'none';
+        alert.classList.remove('alert-warning');
+      }, 3000);
     });
   });
 }

@@ -17,14 +17,16 @@ const PetSchema = new Schema({
     required: true
   },
   birthday: {
-    type: Date,
+    type: String,
     required: true
   },
   picUrl: {
     type: String,
-    required: true
   },
   picUrlSq: {
+    type: String,
+  },
+  avatarUrl: {
     type: String,
     required: true
   },
