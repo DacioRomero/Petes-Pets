@@ -39,6 +39,10 @@ const PetSchema = new Schema({
     minlength: 140,
     required: true
   },
+  price: {
+    type: Number,
+    requireed: true
+  },
 }, { timestamps: true });
 
 PetSchema.plugin(mongoosePaginate);
