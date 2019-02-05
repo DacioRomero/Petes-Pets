@@ -22,13 +22,22 @@ const PetSchema = new Schema({
   },
   picUrl: {
     type: String,
+    // required() {
+    //   return this.avatarUrl == null
+    // }
   },
   picUrlSq: {
     type: String,
+    // required() {
+    //   return this.avatarUrl == null
+    // }
   },
   avatarUrl: {
     type: String,
     required: true
+    // required() {
+    //   return this.picUrl == null
+    // }
   },
   favoriteFood: {
     type: String,
@@ -43,6 +52,9 @@ const PetSchema = new Schema({
     type: Number,
     requireed: true
   },
+  purchasedAt: {
+    type: Date
+  }
 }, { timestamps: true });
 
 PetSchema.plugin(mongoosePaginate);

@@ -108,7 +108,7 @@ module.exports = (app) => {
     const stripe = require('stripe')(process.env.PRIVATE_STRIPE_API_KEY);
     const token = req.body.stripeToken;
 
-    const petId =  req.body.petId || req.params.id;
+    const petId = req.body.petId || req.params.id;
 
     Pet.findById(petId).exec((err, pet) => {
       if(err) {
@@ -121,7 +121,10 @@ module.exports = (app) => {
         description: `Purchased ${pet.name}, ${pet.species}`,
         source: token,
       }).then(() => {
-         res.redirect(`/pets/${req.params.id}`);
+        pet.purchasedAt = Date.now();
+        return pet.save({ validateBeforeSave: false });
+      }).then(() => {
+        res.redirect(`/pets/${petId}`);
       })
       .catch(err => {
         console.log('Error: ' + err);
