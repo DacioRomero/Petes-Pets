@@ -2,14 +2,14 @@
 const express = require('express');
 const asyncHandler = require('express-async-handler');
 const multer = require('multer');
+const Upload = require('s3-uploader');
+const stripe = require('stripe')(process.env.PRIVATE_STRIPE_API_KEY);
 const nodemailer = require('nodemailer');
 const mg = require('nodemailer-mailgun-transport');
-const stripe = require('stripe')(process.env.PRIVATE_STRIPE_API_KEY);
 const Pet = require('../models/pet');
 
 // UPLOADING TO AWS S3
 const upload = multer({ dest: 'uploads/' });
-const Upload = require('s3-uploader');
 
 const client = new Upload(process.env.S3_BUCKET, {
   aws: {
@@ -63,12 +63,17 @@ router.post('/', upload.single('avatar'), asyncHandler(async (req, res) => {
       urlArray.pop();
 
       pet.avatarUrl = urlArray.join('-');
+
+      saveAndSend();
     });
+  } else {
+    saveAndSend();
   }
 
-  await pet.save();
-
-  res.send({ pet });
+  async function saveAndSend() {
+    await pet.save();
+    res.json({ pet });
+  }
 }));
 
 // NEW PET
@@ -107,7 +112,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
   const pet = await Pet.findById(req.params.id);
 
   if (req.header('content-type') == 'application/json') {
-    res.send({ pet });
+    res.json({ pet });
   } else {
     res.render('pets-show', { pet });
   }
@@ -117,7 +122,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
 router.get('/:id/edit', asyncHandler(async (req, res) => {
   const pet = await Pet.findById(req.params.id);
 
-  res.render('pets-edit', { pet: pet });
+  res.render('pets-edit', { pet });
 }));
 
 // UPDATE PET
@@ -150,6 +155,8 @@ router.post('/:id/purchase', asyncHandler(async (req, res) => {
 
   const pet = await Pet.findById(petId);
 
+  console.dir(pet);
+
   const charge = await stripe.charges.create({
     amount: pet.price * 100,
     currency: 'usd',
@@ -166,7 +173,7 @@ router.post('/:id/purchase', asyncHandler(async (req, res) => {
   pet.purchasedAt = Date.now();
 
   Promise.all([
-    await pet.save({ validateBeforeSave: false }),
+    await pet.save(),
     await nodemailerMailgun.sendMail({
       from: 'no-reply@example.com',
       to: user.email,

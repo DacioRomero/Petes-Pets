@@ -22,22 +22,22 @@ const PetSchema = new Schema({
   },
   picUrl: {
     type: String,
-    // required() {
-    //   return this.avatarUrl == null
-    // }
+    required() {
+      return this.avatarUrl == null
+    }
   },
   picUrlSq: {
     type: String,
-    // required() {
-    //   return this.avatarUrl == null
-    // }
+    required() {
+      return this.avatarUrl == null
+    }
   },
   avatarUrl: {
     type: String,
-    required: true
-    // required() {
-    //   return this.picUrl == null
-    // }
+    // required: true
+    required() {
+      return this.picUrl == null
+    }
   },
   favoriteFood: {
     type: String,
@@ -45,7 +45,7 @@ const PetSchema = new Schema({
   },
   description:{
     type: String,
-    minlength: 140,
+    minlength: 100,
     required: true
   },
   price: {
