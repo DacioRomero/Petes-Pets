@@ -100,22 +100,28 @@ router.get('/search', asyncHandler(async (req, res) => {
     term: req.query.term,
   };
 
-  if (req.header('content-type') === 'application/json') {
-    res.json(body);
-  } else {
-    res.render('pets-index', body);
-  }
+  res.format({
+    html() {
+      res.render('pets-index', body);
+    },
+    json() {
+      res.json(body);
+    },
+  });
 }));
 
 // SHOW PET
 router.get('/:id', asyncHandler(async (req, res) => {
   const pet = await Pet.findById(req.params.id);
 
-  if (req.header('content-type') === 'application/json') {
-    res.json({ pet });
-  } else {
-    res.render('pets-show', { pet });
-  }
+  res.format({
+    html() {
+      res.render('pets-show', { pet });
+    },
+    json() {
+      res.json({ pet });
+    },
+  });
 }));
 
 // EDIT PET
@@ -129,22 +135,28 @@ router.get('/:id/edit', asyncHandler(async (req, res) => {
 router.put('/:id', asyncHandler(async (req, res) => {
   const pet = await Pet.findByIdAndUpdate(req.params.id, req.body);
 
-  if (req.header('content-type') === 'application/json') {
-    res.json({ pet });
-  } else {
-    res.redirect(`/pets/${pet._id}`);
-  }
+  res.format({
+    html() {
+      res.redirect(`/pets/${pet._id}`);
+    },
+    json() {
+      res.json({ pet });
+    },
+  });
 }));
 
 // DELETE PET
 router.delete('/:id', asyncHandler(async (req, res) => {
   const pet = await Pet.findByIdAndRemove(req.params.id);
 
-  if (req.header('content-type') === 'application/json') {
-    res.json({ pet });
-  } else {
-    res.redirect('/');
-  }
+  res.format({
+    html() {
+      res.redirect('/');
+    },
+    json() {
+      res.json({ pet });
+    },
+  });
 }));
 
 // PURCHASE PET
@@ -184,11 +196,14 @@ router.post('/:id/purchase', asyncHandler(async (req, res) => {
     }),
   ]);
 
-  if (req.header('content-type') === 'application/json') {
-    res.json({ pet });
-  } else {
-    res.redirect(`/pets/${pet._id}`);
-  }
+  res.format({
+    html() {
+      res.redirect(`/pets/${pet._id}`);
+    },
+    json() {
+      res.json({ pet });
+    },
+  });
 }));
 
 module.exports = router;

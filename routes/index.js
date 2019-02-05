@@ -10,10 +10,23 @@ router.get('/', asyncHandler(async (req, res) => {
 
   const results = await Pet.paginate({}, { page });
 
-  res.render('pets-index', {
+  const body = {
     pets: results.docs,
     pagesCount: results.pages,
     currentPage: page,
+  };
+
+  res.format({
+    html() {
+      res.render('pets-index', {
+        pets: results.docs,
+        pagesCount: results.pages,
+        currentPage: page,
+      });
+    },
+    json() {
+      res.json(body);
+    },
   });
 }));
 

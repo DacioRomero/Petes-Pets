@@ -19,115 +19,149 @@ const fido = {
 chai.use(chaiHttp);
 
 describe('Pets', () => {
-  after(() => {
-    Pet.deleteMany({ $or: [{ name: 'Norman' }, { name: 'Spider' }] }).exec((err, pets) => {
-      pets.remove();
-    });
+  after(async () => {
+    await Pet.remove({ $or: [{ name: 'Norman' }, { name: 'Spider' }] });
   });
 
   // TEST INDEX
-  it('should index ALL pets on / GET', (done) => {
-    chai.request(server)
+  // HTML
+  it('should index ALL pets on / GET as HTML', async () => {
+    const res = await chai.request(server)
+      .get('/');
+
+    res.should.have.status(200);
+    res.should.be.html;
+  });
+  // JSON
+  it('should index ALL pets on / GET as JSON', async () => {
+    const res = await chai.request(server)
       .get('/')
-      .end((err, res) => {
-        res.should.have.status(200);
-        res.should.be.html;
-        done();
-      });
+      .set('Accept', 'application/json');
+
+    res.should.have.status(200);
+    res.should.be.json;
   });
 
   // TEST NEW
-  it('should display new form on /pets/new GET', (done) => {
-    chai.request(server)
-      .get('/pets/new')
-      .end((err, res) => {
-        res.should.have.status(200);
-        res.should.be.html;
-        done();
-      });
+  it('should display new form on /pets/new GET as HTML', async () => {
+    const res = await chai.request(server)
+      .get('/pets/new');
+
+    res.should.have.status(200);
+    res.should.be.html;
   });
 
   // TEST CREATE
-  it('should create a SINGLE pet on /pets POST', (done) => {
-    chai.request(server)
+  it('should create a SINGLE pet on /pets POST as JSON', async () => {
+    const res = await chai.request(server)
       .post('/pets')
-      .send(fido)
-      .end((err, res) => {
-        res.should.have.status(200);
-        res.should.be.html;
-        done();
-      });
+      .set('Accept', 'application/json')
+      .send(fido);
+
+    res.should.have.status(200);
+    res.should.be.json;
   });
 
-  // TEST SHOW
-  it('should show a SINGLE pet on /pets/<id> GET', (done) => {
-    const pet = new Pet(fido);
 
-    pet.save((saveErr, data) => {
-      chai.request(server)
-        .get(`/pets/${data._id}`)
-        .end((reqErr, res) => {
-          res.should.have.status(200);
-          res.should.be.html;
-          done();
-        });
-    });
+  // TEST SHOW
+  // HTML
+  it('should show a SINGLE pet on /pets/<id> GET as HTML', async () => {
+    const pet = await Pet.create(fido);
+
+    const res = await chai.request(server)
+      .get(`/pets/${pet._id}`);
+
+    res.should.have.status(200);
+    res.should.be.html;
+  });
+  // JSON
+  it('should show a SINGLE pet on /pets/<id> GET as JSON', async () => {
+    const pet = await Pet.create(fido);
+
+    const res = await chai.request(server)
+      .get(`/pets/${pet._id}`)
+      .set('Accept', 'application/json');
+
+    res.should.have.status(200);
+    res.should.be.json;
   });
 
   // TEST EDIT
-  it('should edit a SINGLE pet on /pets/<id>/edit GET', (done) => {
-    const pet = new Pet(fido);
+  it('should edit a SINGLE pet on /pets/<id>/edit GET', async () => {
+    const pet = await Pet.create(fido);
 
-    pet.save((saveErr, data) => {
-      chai.request(server)
-        .get(`/pets/${data._id}/edit`)
-        .end((reqErr, res) => {
-          res.should.have.status(200);
-          res.should.be.html;
-          done();
-        });
-    });
+    const res = await chai.request(server)
+      .get(`/pets/${pet._id}/edit`)
+
+    res.should.have.status(200);
+    res.should.be.html;
   });
 
 
   // TEST UPDATE
-  it('should update a SINGLE pet on /pets/<id> PUT', (done) => {
-    const pet = new Pet(fido);
+  // HTML
+  it('should update a SINGLE pet on /pets/<id> PUT as HTML', async () => {
+    const pet = await Pet.create(fido);
 
-    pet.save((petErr, data) => {
-      chai.request(server)
-        .put(`/pets/${data._id}?_method=PUT`)
-        .send({ name: 'Spider' })
-        .end((reqErr, res) => {
-          res.should.have.status(200);
-          res.should.be.html;
-          done();
-        });
-    });
+    const res = await chai.request(server)
+      .put(`/pets/${pet._id}`)
+      .send({ name: 'Spider' });
+
+    res.should.have.status(200);
+    res.should.be.html;
+  });
+  // JSON
+  it('should update a SINGLE pet on /pets/<id> PUT as JSON', async () => {
+    const pet = await Pet.create(fido);
+
+    const res = await chai.request(server)
+      .put(`/pets/${pet._id}`)
+      .set('Accept', 'application/json')
+      .send({ name: 'Spider' });
+
+    res.should.have.status(200);
+    res.should.be.json;
   });
 
   // TEST DELETE
-  it('should delete a SINGLE pet on /pets/<id> DELETE', (done) => {
-    const pet = new Pet(fido);
+  // HTML
+  it('should delete a SINGLE pet on /pets/<id> DELETE as HTML', async () => {
+    const pet = await Pet.create(fido);
 
-    pet.save((petErr, data) => {
-      chai.request(server)
-        .delete(`/pets/${data._id}?_method=DELETE`)
-        .end((reqErr, res) => {
-          res.should.have.status(200);
-          res.should.be.html;
-          done();
-        });
-    });
+    const res = await chai.request(server)
+      .delete(`/pets/${pet._id}`);
+
+    res.should.have.status(200);
+    res.should.be.html;
+  });
+  // JSON
+  it('should delete a SINGLE pet on /pets/<id> DELETE as JSON', async () => {
+    const pet = await Pet.create(fido);
+
+    const res = await chai.request(server)
+      .delete(`/pets/${pet._id}`)
+      .set('Accept', 'application/json');
+
+    res.should.have.status(200);
+    res.should.be.json;
   });
 
-  it('should search ALL pets by name or species on /search GET', (done) => {
-    chai.request(server)
-      .get('/search?term=norman')
-      .end((err, res) => {
-        res.should.have.status(200);
-        res.should.be.html;
-        done();
-      });
+  // TEST Search
+  // HTML
+  it('should search ALL pets by name or species on /search GET as HTML', async () => {
+    const res = await chai.request(server)
+      .get('/pets/search?term=norman');
+
+    res.should.have.status(200);
+    res.should.be.html;
+  });
+  // JSON
+  it('should search ALL pets by name or species on /search GET as JSON', async () => {
+    const res = await chai.request(server)
+      .get('/pets/search?term=norman')
+      .set('Accept', 'application/json');
+
+    res.should.have.status(200);
+    res.should.be.json;
   });
 });
