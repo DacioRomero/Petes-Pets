@@ -1,5 +1,8 @@
 // MODELS
 const Pet = require('../models/pet');
+const nodemailer = require('nodemailer');
+const mg = require('nodemailer-mailgun-transport');
+
 
 // UPLOADING TO AWS S3
 const multer  = require('multer');
@@ -31,6 +34,15 @@ const client = new Upload(process.env.S3_BUCKET, {
     }
   ]
 });
+
+const auth = {
+  auth: {
+    api_key: process.env.MAILGUN_API_KEY,
+    domain: process.env.EMAIL_DOMAIN
+  }
+}
+
+const nodemailerMailgun = nodemailer.createTransport(mg(auth));
 
 // PET ROUTES
 module.exports = (app) => {
@@ -120,10 +132,29 @@ module.exports = (app) => {
         currency: 'usd',
         description: `Purchased ${pet.name}, ${pet.species}`,
         source: token,
-      }).then(() => {
+      }).then((chg) => {
+        const user = {
+          email: req.body.stripeEmail,
+          amount: chg.amount / 100,
+          petName: pet.name
+        };
+        const mail = nodemailerMailgun.sendMail({
+          from: 'no-reply@example.com',
+          to: user.email,
+          subject: 'Pet Purchased!',
+          template: {
+            name: 'email.handlebars',
+            engine: 'handlebars',
+            context: user
+          }
+        }).then(info => {
+          console.log('Response: ' + info)
+        })
+        const save = pet.save({ validateBeforeSave: false })
         pet.purchasedAt = Date.now();
-        return pet.save({ validateBeforeSave: false });
-      }).then(() => {
+        return Promise.all([mail, save]);
+      }).then(([info,]) => {
+        console.log('Response:' + info);
         res.redirect(`/pets/${petId}`);
       })
       .catch(err => {

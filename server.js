@@ -54,4 +54,34 @@ app.use((err, req, res, next) => {
 
 app.locals.PUBLIC_STRIPE_API_KEY = process.env.PUBLIC_STRIPE_API_KEY;
 
+// const auth = {
+//   auth: {
+//     api_key: process.env.MAILGUN_API_KEY,
+//     domain: process.env.EMAIL_DOMAIN
+//   }
+// }
+
+// const nodemailerMailgun = nodemailer.createTransport(mg(auth));
+
+// const user = {
+//   email: 'dacioromero@gmail.com',
+//   name: 'Emily',
+//   age: '43'
+// }
+
+// nodemailerMailgun.sendMail({
+//   from: 'no-reply@example.com',
+//   to: user.email,
+//   subject: 'Hey you, awesome!',
+//   template: {
+//     name: 'email.handlebars',
+//     engine: 'handlebars',
+//     context: user
+//   }
+// }).then(info => {
+//   console.log('Response: ' + info);
+// }).catch(err => {
+//   console.log('Error: ' + err);
+// })
+
 module.exports = app;
