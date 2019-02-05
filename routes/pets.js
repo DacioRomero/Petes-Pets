@@ -1,4 +1,5 @@
 // MODELS
+const express = require('express');
 const asyncHandler = require('express-async-handler');
 const multer = require('multer');
 const nodemailer = require('nodemailer');
@@ -43,142 +44,146 @@ const nodemailerMailgun = nodemailer.createTransport(mg({
   }
 }));
 
-// PET ROUTES
-module.exports = (app) => {
-  // INDEX PET => index.js
+const router = express.Router();
 
-  // NEW PET
-  app.get('/pets/new', (req, res) => {
-    res.render('pets-new');
+// PET ROUTES
+// INDEX PET => index.js
+
+// CREATE PET
+router.post('/', upload.single('avatar'), asyncHandler(async (req, res) => {
+  const pet = new Pet(req.body);
+
+  if(req.file) {
+    client.upload(req.file.path, {}, function(err, versions, meta) {
+      if (err) throw err;
+
+      const image = versions[0];
+
+      const urlArray = image.url.split('-');
+      urlArray.pop();
+
+      pet.avatarUrl = urlArray.join('-');
+    });
+  }
+
+  await pet.save();
+
+  res.send({ pet });
+}));
+
+// NEW PET
+router.get('/new', (req, res) => {
+  res.render('pets-new');
+});
+
+// SEARCH PET
+router.get('/search', asyncHandler(async (req, res) => {
+  const page = req.query.page || 1;
+
+  const results = await Pet.paginate({
+    $text: { $search: req.query.term }
+  }, {
+    select: { score: { $meta: 'textScore' }},
+    sort: { score: { $meta: 'textScore' } },
+    page
   });
 
-  // CREATE PET
-  app.post('/pets', upload.single('avatar'), asyncHandler(async (req, res) => {
-    const pet = new Pet(req.body);
+  const body = {
+    pets: results.docs,
+    pagesCount: results.pages,
+    currentPage: page,
+    term: req.query.term
+  };
 
-    if(req.file) {
-      client.upload(req.file.path, {}, function(err, versions, meta) {
-        if (err) throw err;
+  if (req.header('content-type') == 'application/json')  {
+    res.json(body);
+  } else {
+    res.render('pets-index', body);
+  }
+}));
 
-        const image = versions[0];
+// SHOW PET
+router.get('/:id', asyncHandler(async (req, res) => {
+  const pet = await Pet.findById(req.params.id);
 
-        const urlArray = image.url.split('-');
-        urlArray.pop();
-
-        pet.avatarUrl = urlArray.join('-');
-      });
-    }
-
-    await pet.save();
-
+  if (req.header('content-type') == 'application/json') {
     res.send({ pet });
-  }));
+  } else {
+    res.render('pets-show', { pet });
+  }
+}));
 
-  // SHOW PET
-  app.get('/pets/:id', asyncHandler(async (req, res) => {
-    const pet = await Pet.findById(req.params.id);
+// EDIT PET
+router.get('/:id/edit', asyncHandler(async (req, res) => {
+  const pet = await Pet.findById(req.params.id);
 
-    if (req.header('content-type') == 'application/json') {
-      res.send({ pet });
-    } else {
-      res.render('pets-show', { pet });
-    }
-  }));
+  res.render('pets-edit', { pet: pet });
+}));
 
-  // EDIT PET
-  app.get('/pets/:id/edit', asyncHandler(async (req, res) => {
-    const pet = await Pet.findById(req.params.id);
+// UPDATE PET
+router.put('/:id', asyncHandler(async (req, res) => {
+  const pet = await Pet.findByIdAndUpdate(req.params.id, req.body);
 
-    res.render('pets-edit', { pet: pet });
-  }));
+  if (req.header('content-type') == 'application/json') {
+    res.json({ pet })
+  } else {
+    res.redirect(`/pets/${pet._id}`)
+  }
+}));
 
-  // UPDATE PET
-  app.put('/pets/:id', asyncHandler(async (req, res) => {
-    const pet = await Pet.findByIdAndUpdate(req.params.id, req.body);
+// DELETE PET
+router.delete('/:id', asyncHandler(async (req, res) => {
+  const pet = await Pet.findByIdAndRemove(req.params.id);
 
-    if (req.header('content-type') == 'application/json') {
-      res.json({ pet })
-    } else {
-      res.redirect(`/pets/${pet._id}`)
-    }
-  }));
+  if (req.header('content-type') == 'application/json') {
+    res.json({ pet })
+  } else {
+    res.redirect('/')
+  }
+}));
 
-  // DELETE PET
-  app.delete('/pets/:id', asyncHandler(async (req, res) => {
-    const pet = await Pet.findByIdAndRemove(req.params.id);
+// PURCHASE PET
+router.post('/:id/purchase', asyncHandler(async (req, res) => {
+  const token = req.body.stripeToken;
 
-    if (req.header('content-type') == 'application/json') {
-      res.json({ pet })
-    } else {
-      res.redirect('/')
-    }
-  }));
+  const petId = req.body.petId || req.params.id;
 
-  app.post('/pets/:id/purchase', asyncHandler(async (req, res) => {
-    const token = req.body.stripeToken;
+  const pet = await Pet.findById(petId);
 
-    const petId = req.body.petId || req.params.id;
+  const charge = await stripe.charges.create({
+    amount: pet.price * 100,
+    currency: 'usd',
+    description: `Purchased ${pet.name}, ${pet.species}`,
+    source: token,
+  });
 
-    const pet = await Pet.findById(petId);
+  const user = {
+    email: req.body.stripeEmail,
+    amount: charge.amount / 100,
+    petName: pet.name
+  };
 
-    const charge = await stripe.charges.create({
-      amount: pet.price * 100,
-      currency: 'usd',
-      description: `Purchased ${pet.name}, ${pet.species}`,
-      source: token,
-    });
+  pet.purchasedAt = Date.now();
 
-    const user = {
-      email: req.body.stripeEmail,
-      amount: charge.amount / 100,
-      petName: pet.name
-    };
+  Promise.all([
+    await pet.save({ validateBeforeSave: false }),
+    await nodemailerMailgun.sendMail({
+      from: 'no-reply@example.com',
+      to: user.email,
+      subject: 'Pet Purchased!',
+      template: {
+        name: 'email.handlebars',
+        engine: 'handlebars',
+        context: user
+      }
+    })
+  ]);
 
-    pet.purchasedAt = Date.now();
+  if (req.header('content-type') == 'application/json') {
+    res.json({ pet });
+  } else {
+    res.redirect(`/pets/${pet._id}`);
+  }
+}));
 
-    Promise.all([
-      await pet.save({ validateBeforeSave: false }),
-      await nodemailerMailgun.sendMail({
-        from: 'no-reply@example.com',
-        to: user.email,
-        subject: 'Pet Purchased!',
-        template: {
-          name: 'email.handlebars',
-          engine: 'handlebars',
-          context: user
-        }
-      })
-    ]);
-
-    if (req.header('content-type') == 'application/json') {
-      res.json({ pet });
-    } else {
-      res.redirect(`/pets/${pet._id}`);
-    }
-  }));
-
-  app.get('/search', asyncHandler(async (req, res) => {
-    const page = req.query.page || 1;
-
-    const results = await Pet.paginate({
-      $text: { $search: req.query.term }
-    }, {
-      select: { score: { $meta: 'textScore' }},
-      sort: { score: { $meta: 'textScore' } },
-      page
-    });
-
-    const body = {
-      pets: results.docs,
-      pagesCount: results.pages,
-      currentPage: page,
-      term: req.query.term
-    };
-
-    if (req.header('content-type') == 'application/json')  {
-      res.json(body);
-    } else {
-      res.render('pets-index', body);
-    }
-  }));
-}
+module.exports = router;

@@ -1,13 +1,18 @@
+const express = require('express');
 const asyncHandler = require('express-async-handler');
 const Pet = require('../models/pet');
 
-module.exports = (app) => {
-  /* GET home page. */
-  app.get('/', asyncHandler(async (req, res) => {
-    const page = req.query.page || 1;
+const router = express.Router();
 
-    const results = await Pet.paginate({}, { page });
+/* GET home page. */
+router.get('/', asyncHandler(async (req, res) => {
+  const page = req.query.page || 1;
 
-    res.render('pets-index', { pets: results.docs, pagesCount: results.pages, currentPage: page });
-  }));
-}
+  const results = await Pet.paginate({}, { page });
+
+  res.render('pets-index', { pets: results.docs, pagesCount: results.pages, currentPage: page });
+}));
+
+router.use('/pets', require('./pets'));
+
+module.exports = router;
