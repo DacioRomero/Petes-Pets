@@ -164,22 +164,37 @@ module.exports = (app) => {
   });
 
   app.get('/search', (req, res) => {
-    const term = new RegExp(req.query.term, 'i');
+    Pet.find(
+      { $text : { $search: req.query.term } },
+      { score: { $meta: 'textScore'} }
+    )
+    .sort({ score: { $meta: 'textScore' } })
+    .limit(20)
+    .exec((err, pets) => {
+      if (err) { return res.status(400).send(err); }
 
-    const page = req.query.page || 1;
-    Pet.paginate({
-      $or: [
-        { name: term },
-        { species: term }
-      ]
-    }, { page })
-    .then((results) => {
-      res.render('pets-index', {
-        pets: results.docs,
-        pagesCount: results.pages,
-        currentPage: page,
-        term: req.query.term
-      });
+      if (req.header('Content-Type') == 'application/json') {
+        return res.json({ pets });
+      } else {
+        return res.render('pets-index', { pets, term: req.query.term });
+      }
     });
+    // const term = new RegExp(req.query.term, 'i');
+
+    // const page = req.query.page || 1;
+    // Pet.paginate({
+    //   $or: [
+    //     { name: term },
+    //     { species: term }
+    //   ]
+    // }, { page })
+    // .then((results) => {
+    //   res.render('pets-index', {
+    //     pets: results.docs,
+    //     pagesCount: results.pages,
+    //     currentPage: page,
+    //     term: req.query.term
+    //   });
+    // });
   });
 }
