@@ -12,12 +12,10 @@ block content
       p=pet.species
       p Born on #{pet.birthday}
       p=pet.description
-      .text-right
-        a(href="/pets/" + pet.id + "/edit").btn-link Edit
       if pet.purchasedAt
-        p.text-success Purchased
+        p.text-success.float-left Purchased
       else
-        form(action=`/pets/${pet._id}/purchase`, method='POST')
+        form(action=`/pets/${pet._id}/purchase`, method='POST').float-left
           script.stripe-button(src='https://checkout.stripe.com/checkout.js',
           data-key=PUBLIC_STRIPE_API_KEY,
           data-amount=pet.price * 100,
@@ -27,3 +25,5 @@ block content
           data-locale='auto',
           data-zip-code='true')
           input.form-control(type='hidden' value=pet._id name='petId')
+      .float-right
+        a(href="/pets/" + pet.id + "/edit").btn-link Edit
