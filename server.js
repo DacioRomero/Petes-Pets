@@ -15,7 +15,7 @@ if (!process.env.PORT) {
 
 const app = express();
 
-mongoose.connect('mongodb://localhost/petes-pets');
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost/petes-pets');
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
